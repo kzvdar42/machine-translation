@@ -221,3 +221,9 @@ dmypy.json
 .history
 
 # End of https://www.gitignore.io/api/python,intellij,jupyternotebooks,visualstudiocode
+
+# Project ignores:
+# Datasets
+data/
+# Models
+models/
