@@ -80,9 +80,9 @@ def train_model(model, n_epochs, data_iterators,
                 except FileNotFoundError:
                     print('Error during saving!')
         try:
-            translate(model, 'Машинное обучение это здорово!', verbose=True)
+            translate(model, tokenizer, 'Машинное обучение это здорово!', verbose=True)
             rand_ind = np.random.randint(0, len(test_data))
-            translate(model, test_data.raw_src[rand_ind], verbose=True)
+            translate(model, tokenizer, test_data.raw_src[rand_ind], verbose=True)
         except:
             print('Error while translation.')
         if scheduler:
@@ -93,11 +93,13 @@ def train_model(model, n_epochs, data_iterators,
 def subword_to_str(tokens):
     return ''.join(tokens).replace('▁', ' ')
 
-def tokens_to_str(tokens):
+def tokens_to_str(tokenizer, tokens):
     return subword_to_str([tokenizer.id_to_subword(ix) for ix in tokens])
 
-def translate(model, text, max_len=80, verbose=False):
+def translate(model, tokenizer, text, max_len=80, verbose=False):
     model.eval()
+    # Get the device the model is stored on.
+    device = next(model.parameters()).device
     
     if verbose:
         print('------------ Translation ------------')
@@ -130,7 +132,7 @@ def translate(model, text, max_len=80, verbose=False):
         outputs[i] = ix[-1][0][0]
         if outputs[i] == EOS_TOKEN:
             break
-    result = tokens_to_str(outputs[:i+1])
+    result = tokens_to_str(tokenizer, outputs[:i+1])
     if verbose:
         print('Output weights:')
         for j in range(min(3, i)):
@@ -140,11 +142,13 @@ def translate(model, text, max_len=80, verbose=False):
     return result
 
 
-def translate_beam(model, text, max_len=10, beam_capacity=3, verbose=False):
+def translate_beam(model, tokenizer, text, max_len=10, beam_capacity=3, verbose=False):
     """
     Algorithm: https://www.youtube.com/watch?v=RLWuzLLSIgw
     """
     model.eval()
+    # Get the device the model is stored on.
+    device = next(model.parameters()).device
     if verbose:
         print('------------ Translation ------------')
         print('Input:', text)
@@ -188,7 +192,7 @@ def translate_beam(model, text, max_len=10, beam_capacity=3, verbose=False):
         if verbose:
             for beam, old_prob in beam_pool:
                 print("Candidate '{}' with prob: {:.7f}".format(
-                    tokens_to_str(beam[1:i + 1]), prob * old_prob
+                    tokens_to_str(tokenizer, beam[1:i + 1]), prob * old_prob
                 ))
         # Stop if EOS_TOKEN
         if beam_pool[0][0][i] == EOS_TOKEN:
@@ -197,7 +201,7 @@ def translate_beam(model, text, max_len=10, beam_capacity=3, verbose=False):
     # Cut by EOS_TOKEN
 #     if EOS_TOKEN in the_best:
 #         i = (the_best == EOS_TOKEN).nonzero()[0]
-    result = tokens_to_str(the_best[:i+1])
+    result = tokens_to_str(tokenizer, the_best[:i+1])
     return result
 
 
@@ -207,7 +211,7 @@ def calc_BLEU(model, data):
     # TODO: batch translation.
     for raw_src, raw_tgt in zip(data.raw_src, data.raw_tgt):
         references.append([raw_tgt])
-        candidate = translate(model, raw_src)
+        candidate = translate(model, tokenizer, raw_src)
         candidate = candidate.replace('<BOS>', '').replace('<EOS>', '')
         candidates.append(candidate)
         pbar.update(1)

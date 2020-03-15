@@ -15,8 +15,8 @@ def load_files(path):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(prog='preparation.py', description='Preprocess the data.')
-    parser.add_argument('store_path', help='path there to store the results.')
     parser.add_argument('dataset_path', help='path to the dataset.')
+    parser.add_argument('store_path', help='path there to store the results.')
     parser.add_argument('--dataset_size', nargs='?', type=int, help='max number of samples in dataset.')
     parser.add_argument('--vocab_size', nargs='?', type=int, default=2 ** 15,
                     help="the size of the tokenizer's vocabulary.")
