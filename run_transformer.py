@@ -1,4 +1,6 @@
 from nltk.translate.bleu_score import corpus_bleu
+import os
+import numpy as np
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
@@ -60,7 +62,7 @@ def train_model(model, n_epochs, data_iterators,
     
     for epoch in range(n_epochs):
         lr = optimizer.state_dict()['param_groups'][0]['lr']
-        print(f'------------ Epoch {epoch}; lr: {lr:.5f} ------------')
+        tqdm.write(f'------------ Epoch {epoch}; lr: {lr:.5f} ------------')
         for phase in ['train', 'val']:
             desc = f'{phase.title()} Epoch #{epoch} '
             epoch_loss = run_model(model, criterion, optimizer,
@@ -71,20 +73,20 @@ def train_model(model, n_epochs, data_iterators,
             tqdm.write(f'{phase.title()} Loss: ' + print_hist(stats[phase]['loss']))
         if best_loss == None or stats['val']['loss'][-1] < best_loss:
             best_loss = stats['val']['loss'][-1]
-            print('Smallest val loss')
-            print('Saving model...')
+            tqdm.write('Smallest val loss')
+            tqdm.write('Saving model...')
             if model_save_path:
                 try:
                     torch.save(model, model_save_path)
-                    print('Saved successfully')
+                    tqdm.write('Saved successfully')
                 except FileNotFoundError:
-                    print('Error during saving!')
+                    tqdm.write('Error during saving!')
         try:
             translate(model, tokenizer, 'Машинное обучение это здорово!', verbose=True)
-            rand_ind = np.random.randint(0, len(test_data))
-            translate(model, tokenizer, test_data.raw_src[rand_ind], verbose=True)
+            rand_ind = np.random.randint(0, len(data_iterators['test']))
+            translate(model, tokenizer, data_iterators['test'].raw_src[rand_ind], verbose=True)
         except:
-            print('Error while translation.')
+            tqdm.write('Error while translation.')
         if scheduler:
             scheduler.step()
     return stats
@@ -267,8 +269,7 @@ if __name__ == '__main__':
     # Make dataloaders.
     print('Making dataloaders...')
     (train_iterator,
-    val_iterator,
-    test_iterator) = make_dataloaders([train_data, val_data, test_data],
+    val_iterator) = make_dataloaders([train_data, val_data],
                                     batch_size=args.batch_size,
                                     pad_token=PADDING_TOKEN,
                                     num_workers=0)
@@ -276,7 +277,7 @@ if __name__ == '__main__':
     data_iterators = {
         'train': train_iterator,
         'val': val_iterator,
-        'test': test_iterator,
+        'test': test_data,
     }
 
     if args.model_save_path and os.path.exists(args.model_save_path):
