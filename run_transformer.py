@@ -52,6 +52,7 @@ def run_model(model, criterion, optimizer, data_iterator, is_train_phase, n_word
         total_loss += tgt_losses / j
         pbar.update(1)
         pbar.set_description(desc + f'- loss: {total_loss / (i+1):7.4}')
+    pbar.close()
     return total_loss / (i+1)
 
 def train_model(model, n_epochs, data_iterators,
@@ -102,6 +103,8 @@ def translate(model, tokenizer, text, max_len=80, verbose=False):
     model.eval()
     # Get the device the model is stored on.
     device = next(model.parameters()).device
+    # Preprocess the text.
+    text = text.strip().lower()
     
     if verbose:
         print('------------ Translation ------------')
@@ -151,6 +154,9 @@ def translate_beam(model, tokenizer, text, max_len=10, beam_capacity=3, verbose=
     model.eval()
     # Get the device the model is stored on.
     device = next(model.parameters()).device
+    # Preprocess the text.
+    text = text.strip().lower()
+    
     if verbose:
         print('------------ Translation ------------')
         print('Input:', text)
@@ -217,6 +223,7 @@ def calc_BLEU(model, data):
         candidate = candidate.replace('<BOS>', '').replace('<EOS>', '')
         candidates.append(candidate)
         pbar.update(1)
+    pbar.close()
     score = corpus_bleu(references, candidates, weights=(0.25, 0.25, 0.25, 0.25))
     print(f'Test BLEU score - {score:.4f}')
 
@@ -291,7 +298,8 @@ if __name__ == '__main__':
 
     # Ignore padding index during the loss computation.
     criterion = nn.CrossEntropyLoss(ignore_index=PADDING_TOKEN, reduction='mean')
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98), eps=10e-09)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3.0, gamma=0.95)
     stats = train_model(model, args.n_epochs, data_iterators,
                         criterion, optimizer, scheduler, args.n_words, args.model_save_path)
